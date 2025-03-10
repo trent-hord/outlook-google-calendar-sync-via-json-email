@@ -1,0 +1,167 @@
+{
+    "name": "470f1fe2-5838-45ce-aec9-c111c0fa1f80",
+    "id": "/providers/Microsoft.Flow/flows/470f1fe2-5838-45ce-aec9-c111c0fa1f80",
+    "type": "Microsoft.Flow/flows",
+    "properties": {
+        "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+        "displayName": "outboundBlockers",
+        "definition": {
+            "metadata": {
+                "workflowEntityId": null,
+                "processAdvisorMetadata": null,
+                "flowChargedByPaygo": null,
+                "flowclientsuspensionreason": "None",
+                "flowclientsuspensiontime": null,
+                "flowclientsuspensionreasondetails": null,
+                "creator": {
+                    "id": "e1442226-9cd5-4fa9-bfad-90b6f3ee70fe",
+                    "type": "User",
+                    "tenantId": "fac316d0-41c2-41a0-acce-ca6df43c335c"
+                },
+                "provisioningMethod": "FromDefinition",
+                "failureAlertSubscription": true,
+                "clientLastModifiedTime": "2025-03-10T05:39:56.4120719Z",
+                "connectionKeySavedTimeKey": "2025-03-10T05:39:56.4120719Z",
+                "creationSource": "Portal",
+                "modifiedSources": "Portal"
+            },
+            "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+            "contentVersion": "undefined",
+            "parameters": {
+                "$authentication": {
+                    "defaultValue": {},
+                    "type": "SecureObject"
+                },
+                "$connections": {
+                    "defaultValue": {},
+                    "type": "Object"
+                }
+            },
+            "triggers": {
+                "Recurrence": {
+                    "recurrence": {
+                        "frequency": "Hour",
+                        "interval": 1,
+                        "startTime": "2025-03-05T16:00:00.000Z"
+                    },
+                    "type": "Recurrence"
+                }
+            },
+            "actions": {
+                "Get_calendar_view_of_events_(V3)": {
+                    "runAfter": {
+                        "Setting_-_ignoreEventTitle": [
+                            "Succeeded"
+                        ]
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                        "parameters": {
+                            "calendarId": "AQMkAGYzMTRhMzMAYS02YjNjLTQwZjktYTk5AS1jZDUzZDg3YWY4ZjUARgAAA8kOB1SjbR5IoEPX88zlYzkHAH5DLj6jyTlLnsBaR8NgXuMAAAIBBgAAAH5DLj6jyTlLnsBaR8NgXuMAAAJpSwAAAA==",
+                            "startDateTimeUtc": "@addDays(utcNow(), -3)",
+                            "endDateTimeUtc": "@addDays(utcNow(), variables('daysToSync'))"
+                        },
+                        "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                            "connectionName": "shared_office365-1",
+                            "operationId": "GetEventsCalendarViewV3"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                    }
+                },
+                "Select_event_details,_generalize_event_title": {
+                    "runAfter": {
+                        "Filter_ignored_Events": [
+                            "Succeeded"
+                        ]
+                    },
+                    "type": "Select",
+                    "inputs": {
+                        "from": "@body('Filter_ignored_Events')",
+                        "select": {
+                            "subject": "Company2 Blocker",
+                            "startWithTimeZone": "@item()?['startWithTimeZone']",
+                            "endWithTimeZone": "@item()?['endWithTimeZone']",
+                            "iCalUId": "@item()?['iCalUId']"
+                        }
+                    }
+                },
+                "Send_an_email_(V2)": {
+                    "runAfter": {
+                        "Select_event_details,_generalize_event_title": [
+                            "Succeeded"
+                        ]
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                        "parameters": {
+                            "emailMessage/To": "destination@company1.com",
+                            "emailMessage/Subject": "CalendarEvents",
+                            "emailMessage/Body": "<p class=\"editor-paragraph\">@{string(body('Select_event_details,_generalize_event_title'))}</p>",
+                            "emailMessage/Importance": "Normal"
+                        },
+                        "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                            "connectionName": "shared_office365-1",
+                            "operationId": "SendEmailV2"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                    }
+                },
+                "Setting_-_daysToSync": {
+                    "runAfter": {},
+                    "type": "InitializeVariable",
+                    "inputs": {
+                        "variables": [
+                            {
+                                "name": "daysToSync",
+                                "type": "integer",
+                                "value": 7
+                            }
+                        ]
+                    }
+                },
+                "Filter_ignored_Events": {
+                    "runAfter": {
+                        "Get_calendar_view_of_events_(V3)": [
+                            "Succeeded"
+                        ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                        "from": "@outputs('Get_calendar_view_of_events_(V3)')?['body/value']",
+                        "where": "@not(equals(item()?['subject'],variables('ignoreEventTItle')))"
+                    }
+                },
+                "Setting_-_ignoreEventTitle": {
+                    "runAfter": {
+                        "Setting_-_daysToSync": [
+                            "Succeeded"
+                        ]
+                    },
+                    "type": "InitializeVariable",
+                    "inputs": {
+                        "variables": [
+                            {
+                                "name": "ignoreEventTItle",
+                                "type": "string",
+                                "value": "Company1 Blocker"
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        "connectionReferences": {
+            "shared_office365-1": {
+                "connectionName": "shared-office365-cbe5a705-cf3f-4a73-989a-3c800cedfff0",
+                "source": "Embedded",
+                "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                "tier": "NotSpecified",
+                "apiName": "office365"
+            }
+        },
+        "flowFailureAlertSubscribed": false,
+        "isManaged": false
+    }
+}
